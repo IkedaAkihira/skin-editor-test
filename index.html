@@ -1,753 +1,761 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<title>Minecraft skin editor</title>
-<meta charset="utf-8"/>
+    <title>Minecraft skin editor</title>
+    <meta charset="utf-8" />
 </head>
+
 <body>
-<style>
-canvas{
-pointer-events: none;
-}
-#colorMaster{
-position:fixed;
-top:0px;
-right:0px;
-}
-#parent{
-position:relative;
-top:0px;
-left:0px;
-}
-.mainCanvases{
-position:absolute;
-top:0px;
-left:0px;
-}
-a{
-color:black;
-text-decoration: none;
-}
-img{
-border-width:5px 1.25em;
-}
-</style>
-<div id="parent">
-<canvas id="canvas" width="690" height="1840" class="mainCanvases"></canvas>
-<canvas id="grid" width="690" height="1840" class="mainCanvases"></canvas>
-<canvas id="pointerCanvas" width="690" height="1840" class="mainCanvases"></canvas>
-</div>
-<canvas id="toDownload" width="64" height="64" style="display:none"></canvas>
-<div id="colorMaster">
-<p>r:<input type="range" min="0" max="255" onchange="colorChange()" id="red" value="0"/></p>
-<p>g:<input type="range" min="0" max="255" onchange="colorChange()" id="green" value="0"/></p>
-<p>b:<input type="range" min="0" max="255" onchange="colorChange()" id="blue" value="0"/></p>
-<p>size:<input type="range" min="0" max="2" onchange="colorChange()" id="size" value="0"/></p>
-<p><img src="pen.jpg" width="50" height="50" onclick="pen()" id="pen"/></p>
-<p><img src="picker.jpg" width="50" height="50" onclick="picker()" id="picker"/></p>
-<p><img src="eraser.jpg" width="50" height="50" onclick="eraser()" id="eraser"/></p>
-<p><img src="penki.jpg" width="50" height="50" onclick="penki()" id="penki"/></p>
-<canvas id="colorP"width="50" height="50"></canvas>
-<p><a id="download" download="skin.png">download</a></p>
-<p id="upload" onclick="upload()">upload</p>
-</div>
-<canvas id="to3Dtexture" style="display:none"></canvas>
-<input type="file" id="uploader" accept="image/png, image/jpeg" style="display:none"/>
-<img id="uploadImage" style="display:none"/>
-<script src="three.min.js"></script>
-<script src="TextureLoader.js"></script>
-<script src="CanvasTexture.js"></script>
-<script src="minecraftdata.js"></script>
-<script>
-"use strict"
-let canvas=document.getElementById("canvas");
-let ctx=canvas.getContext("2d");
-let mouseEffect=false,color,colorP=document.getElementById("colorP").getContext("2d"),masterTime=false,sizeOfPen,effectOfPen="pen",pickerData,
-toDownloadData=[[100,8,8,8,0,0,32,0],
-[440,8,12,4,16,16,16,32],
-[740,4,12,4,40,16,40,32],
-[1040,4,12,4,32,48,48,48],
-[1340,4,12,4,0,16,0,32],
-[1640,4,12,4,16,48,0,48],
-],
-timer=NaN,fileReader=new FileReader();
-let uploadImage=document.getElementById("uploadImage");
-let ImFree=false;
-//about three.js
-let renderer=new THREE.WebGLRenderer(),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(60,2/3,1,1000),/*loader=new THREE.TextureLoader(),*/
-//mat=[new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))})],
-//geo=new THREE.CubeGeometry(80,80,80),
-r=0;
-let parts=[],parts2=[];
-let canvasToTexture=[],canvasToTexture2=[];
-let uploaded=false;
-for(let i=0;i<6;i++){
-parts[i]=new THREE.Mesh(new THREE.CubeGeometry(toDownloadData[i][1]*9,toDownloadData[i][2]*9,toDownloadData[i][3]*9),[new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide})]);
-scene.add(parts[i]);
-parts2[i]=new THREE.Mesh(new THREE.CubeGeometry(toDownloadData[i][1]*10,toDownloadData[i][2]*10,toDownloadData[i][3]*10),[new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen")),side:THREE.DoubleSide})]);
-scene.add(parts2[i]);
-canvasToTexture[i]=[];
-canvasToTexture2[i]=[];
-for(let j=0;j<6;j++){
-canvasToTexture[i][j]=document.createElement("canvas");
-canvasToTexture2[i][j]=document.createElement("canvas");
-}
-}
-parts[1].position.set(0,-100,0);
-parts[2].position.set(-(toDownloadData[2][1]*5+40),-100,0);
-parts[3].position.set(toDownloadData[2][1]*5+40,-100,0);
-parts[4].position.set(-20,-220,0);
-parts[5].position.set(20,-220,0);
-parts2[1].position.set(0,-100,0);
-parts2[2].position.set(-(toDownloadData[2][1]*5+40),-100,0);
-parts2[3].position.set(toDownloadData[2][1]*5+40,-100,0);
-parts2[4].position.set(-20,-220,0);
-parts2[5].position.set(20,-220,0);
-renderer.setSize(150,225);
-renderer.setClearColor(0xffffff);
-document.getElementById("colorMaster").appendChild(renderer.domElement);
-camera.position.z+=400;
-renderer.render(scene,camera);
-//y座標,x,y,z,コピー先x,コピー先y,コピー先x2,コピー先y2
-let grid=document.getElementById("grid").getContext("2d");
-let pointerCanvas=document.getElementById("pointerCanvas").getContext("2d");
-ctx.textAlign="left";
-ctx.font="40px serif";
-let toDownload=document.getElementById("toDownload").getContext("2d");
-if(window.confirm("alexがいいのか？")){
-toDownloadData[2][1]=3;
-toDownloadData[3][1]=3;
-}
+    <style>
+        canvas {
+            pointer-events: none;
+        }
+
+        #colorMaster {
+            position: fixed;
+            top: 0px;
+            right: 0px;
+        }
+
+        #parent {
+            position: relative;
+            top: 0px;
+            left: 0px;
+        }
+
+        .mainCanvases {
+            position: absolute;
+            top: 0px;
+            left: 0px;
+        }
+
+        a {
+            color: black;
+            text-decoration: none;
+        }
+
+        img {
+            border-width: 5px 1.25em;
+        }
+    </style>
+    <div id="parent">
+        <canvas id="canvas" width="690" height="1840" class="mainCanvases"></canvas>
+        <canvas id="grid" width="690" height="1840" class="mainCanvases"></canvas>
+        <canvas id="pointerCanvas" width="690" height="1840" class="mainCanvases"></canvas>
+    </div>
+    <canvas id="toDownload" width="64" height="64" style="display:none"></canvas>
+    <div id="colorMaster">
+        <p>r:<input type="range" min="0" max="255" onchange="colorChange()" id="red" value="0" /></p>
+        <p>g:<input type="range" min="0" max="255" onchange="colorChange()" id="green" value="0" /></p>
+        <p>b:<input type="range" min="0" max="255" onchange="colorChange()" id="blue" value="0" /></p>
+        <p>size:<input type="range" min="0" max="2" onchange="colorChange()" id="size" value="0" /></p>
+        <p><img src="pen.jpg" width="50" height="50" onclick="pen()" id="pen" /></p>
+        <p><img src="picker.jpg" width="50" height="50" onclick="picker()" id="picker" /></p>
+        <p><img src="eraser.jpg" width="50" height="50" onclick="eraser()" id="eraser" /></p>
+        <p><img src="penki.jpg" width="50" height="50" onclick="penki()" id="penki" /></p>
+        <canvas id="colorP" width="50" height="50"></canvas>
+        <p><a id="download" download="skin.png">download</a></p>
+        <p id="upload" onclick="upload()">upload</p>
+    </div>
+    <canvas id="to3Dtexture" style="display:none"></canvas>
+    <input type="file" id="uploader" accept="image/png, image/jpeg" style="display:none" />
+    <img id="uploadImage" style="display:none" />
+    <script src="three.min.js"></script>
+    <script src="TextureLoader.js"></script>
+    <script src="CanvasTexture.js"></script>
+    <script src="minecraftdata.js"></script>
+    <script>
+        "use strict"
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let mouseEffect = false, color, colorP = document.getElementById("colorP").getContext("2d"), masterTime = false, sizeOfPen, effectOfPen = "pen", pickerData,
+            toDownloadData = [[100, 8, 8, 8, 0, 0, 32, 0],
+            [440, 8, 12, 4, 16, 16, 16, 32],
+            [740, 4, 12, 4, 40, 16, 40, 32],
+            [1040, 4, 12, 4, 32, 48, 48, 48],
+            [1340, 4, 12, 4, 0, 16, 0, 32],
+            [1640, 4, 12, 4, 16, 48, 0, 48],
+            ],
+            timer = NaN, fileReader = new FileReader();
+        let uploadImage = document.getElementById("uploadImage");
+        let ImFree = false;
+        //about three.js
+        let renderer = new THREE.WebGLRenderer(), scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(60, 2 / 3, 1, 1000),/*loader=new THREE.TextureLoader(),*/
+            //mat=[new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))}),new THREE.MeshBasicMaterial({transparent: true,map:new THREE.Texture(document.getElementById("pen"))})],
+            //geo=new THREE.CubeGeometry(80,80,80),
+            r = 0;
+        let parts = [], parts2 = [];
+        let canvasToTexture = [], canvasToTexture2 = [];
+        let uploaded = false;
+        for (let i = 0; i < 6; i++) {
+            parts[i] = new THREE.Mesh(new THREE.CubeGeometry(toDownloadData[i][1] * 9, toDownloadData[i][2] * 9, toDownloadData[i][3] * 9), [new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide })]);
+            scene.add(parts[i]);
+            parts2[i] = new THREE.Mesh(new THREE.CubeGeometry(toDownloadData[i][1] * 10, toDownloadData[i][2] * 10, toDownloadData[i][3] * 10), [new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide }), new THREE.MeshBasicMaterial({ transparent: true, map: new THREE.Texture(document.getElementById("pen")), side: THREE.DoubleSide })]);
+            scene.add(parts2[i]);
+            canvasToTexture[i] = [];
+            canvasToTexture2[i] = [];
+            for (let j = 0; j < 6; j++) {
+                canvasToTexture[i][j] = document.createElement("canvas");
+                canvasToTexture2[i][j] = document.createElement("canvas");
+            }
+        }
+        parts[1].position.set(0, -100, 0);
+        parts[2].position.set(-(toDownloadData[2][1] * 5 + 40), -100, 0);
+        parts[3].position.set(toDownloadData[2][1] * 5 + 40, -100, 0);
+        parts[4].position.set(-20, -220, 0);
+        parts[5].position.set(20, -220, 0);
+        parts2[1].position.set(0, -100, 0);
+        parts2[2].position.set(-(toDownloadData[2][1] * 5 + 40), -100, 0);
+        parts2[3].position.set(toDownloadData[2][1] * 5 + 40, -100, 0);
+        parts2[4].position.set(-20, -220, 0);
+        parts2[5].position.set(20, -220, 0);
+        renderer.setSize(150, 225);
+        renderer.setClearColor(0xffffff);
+        document.getElementById("colorMaster").appendChild(renderer.domElement);
+        camera.position.z += 400;
+        renderer.render(scene, camera);
+        //y座標,x,y,z,コピー先x,コピー先y,コピー先x2,コピー先y2
+        let grid = document.getElementById("grid").getContext("2d");
+        let pointerCanvas = document.getElementById("pointerCanvas").getContext("2d");
+        ctx.textAlign = "left";
+        ctx.font = "40px serif";
+        let toDownload = document.getElementById("toDownload").getContext("2d");
+        if (window.confirm("alexがいいのか？")) {
+            toDownloadData[2][1] = 3;
+            toDownloadData[3][1] = 3;
+        }
 
 
-//toDownload.scale(1/10,1/10);
-//timer=setInterval(tick,100);                   //tick for render
-function draw(){
-ctx.clearRect(0,0,690,1840);
-ctx.fillText("head",0,70);
-ctx.fillText("head2",350,70);
-ctx.fillText("body",0,410);
-ctx.fillText("body2",350,410);
-ctx.fillText("right arm",0,710);
-ctx.fillText("right arm2",350,710);
-ctx.fillText("left arm",0,1010);
-ctx.fillText("left arm2",350,1010);
-ctx.fillText("right leg",0,1310);
-ctx.fillText("right leg2",350,1310);
-ctx.fillText("left leg",0,1610);
-ctx.fillText("left leg2",350,1610);
-colorChange();
-grid.strokeStyle="#888888";
-for(let j=0;j<184;j++){
-for(let i=0;i<69;i++){
-if(gridJudgement(i*10,j*10)){
-grid.strokeRect(i*10,j*10,10,10);
-pointerCanvas.strokeStyle="orange";
-}
-}
-}
-}
-onload=draw;
-onmousemove=secondDraw;
-function secondDraw(e){
-pointerCanvas.clearRect(0,0,690,1840);
-if(gridJudgement(e.offsetX,e.offsetY)){
-if(mouseEffect){
-switch(effectOfPen){
-case "pen":
-for(let i=-sizeOfPen;i<sizeOfPen+1;i++){
-for(let j=-sizeOfPen;j<sizeOfPen+1;j++){
-if(gridJudgement(e.offsetX+i*10,e.offsetY+j*10)){
-ctx.fillRect(Math.floor(e.offsetX/10)*10+i*10,Math.floor(e.offsetY/10)*10+j*10,10,10);
-}
-}
-}
-break;
-case "picker":
-console.log(ctx.getImageData(Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10,1,1).data);
-pickerData=ctx.getImageData(Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10,1,1).data;
-document.getElementById("red").value=pickerData[0];
-document.getElementById("green").value=pickerData[1];
-document.getElementById("blue").value=pickerData[2];
-colorChange();
-pen();
-break;
-case "eraser":
-for(let i=-sizeOfPen;i<sizeOfPen+1;i++){
-for(let j=-sizeOfPen;j<sizeOfPen+1;j++){
-if(gridJudgement(e.offsetX,e.offsetY)){
-ctx.clearRect(Math.floor(e.offsetX/10)*10+i*10,Math.floor(e.offsetY/10)*10+j*10,10,10);
-}
-}
-}
-break;
-case "penki":
-/*var originalColor=ctx.getImageData(Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10,1,1).data;
-var penkiData=[[[Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10]]];
-var count=0;
-console.log(penkiData[0].length);
-while(penkiData[0].length){
-penkiData[1]=[];
-console.log(penkiData);
-for(let i=0;i<penkiData[0].length;i++){
-ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1],10,10);
-if(ctx.getImageData(penkiData[0][i][0]-10,penkiData[0][i][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0]-10,penkiData[0][i][1])){
-penkiData[1].push([penkiData[0][i][0]-10,penkiData[0][i][1]]);
-ctx.fillRect(penkiData[0][i][0]-10,penkiData[0][i][1],10,10);
-}
-if(ctx.getImageData(penkiData[0][i][0]+10,penkiData[0][i][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0]+10,penkiData[0][i][1])){
-penkiData[1].push([penkiData[0][i][0]+10,penkiData[0][i][1]]);
-ctx.fillRect(penkiData[0][i][0]+10,penkiData[0][i][1],10,10);
-}
-if(ctx.getImageData(penkiData[0][i][0],penkiData[0][i][1]-10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0],penkiData[0][i][1]-10)){
-penkiData[1].push([penkiData[0][i][0],penkiData[0][i][1]-10]);
-ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1]-10,10,10);
-}
-if(ctx.getImageData(penkiData[0][i][0],penkiData[0][i][1]+10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0],penkiData[0][i][1]+10)){
-penkiData[1].push([penkiData[0][i][0],penkiData[0][i][1]+10]);
-ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1]+10,10,10);
-}
+        //toDownload.scale(1/10,1/10);
+        //timer=setInterval(tick,100);                   //tick for render
+        function draw() {
+            ctx.clearRect(0, 0, 690, 1840);
+            ctx.fillText("head", 0, 70);
+            ctx.fillText("head2", 350, 70);
+            ctx.fillText("body", 0, 410);
+            ctx.fillText("body2", 350, 410);
+            ctx.fillText("right arm", 0, 710);
+            ctx.fillText("right arm2", 350, 710);
+            ctx.fillText("left arm", 0, 1010);
+            ctx.fillText("left arm2", 350, 1010);
+            ctx.fillText("right leg", 0, 1310);
+            ctx.fillText("right leg2", 350, 1310);
+            ctx.fillText("left leg", 0, 1610);
+            ctx.fillText("left leg2", 350, 1610);
+            colorChange();
+            grid.strokeStyle = "#888888";
+            for (let j = 0; j < 184; j++) {
+                for (let i = 0; i < 69; i++) {
+                    if (gridJudgement(i * 10, j * 10)) {
+                        grid.strokeRect(i * 10, j * 10, 10, 10);
+                        pointerCanvas.strokeStyle = "orange";
+                    }
+                }
+            }
+        }
+        onload = draw;
+        onmousemove = secondDraw;
+        function secondDraw(e) {
+            pointerCanvas.clearRect(0, 0, 690, 1840);
+            if (gridJudgement(e.offsetX, e.offsetY)) {
+                if (mouseEffect) {
+                    switch (effectOfPen) {
+                        case "pen":
+                            for (let i = -sizeOfPen; i < sizeOfPen + 1; i++) {
+                                for (let j = -sizeOfPen; j < sizeOfPen + 1; j++) {
+                                    if (gridJudgement(e.offsetX + i * 10, e.offsetY + j * 10)) {
+                                        ctx.fillRect(Math.floor(e.offsetX / 10) * 10 + i * 10, Math.floor(e.offsetY / 10) * 10 + j * 10, 10, 10);
+                                    }
+                                }
+                            }
+                            break;
+                        case "picker":
+                            console.log(ctx.getImageData(Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10, 1, 1).data);
+                            pickerData = ctx.getImageData(Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10, 1, 1).data;
+                            document.getElementById("red").value = pickerData[0];
+                            document.getElementById("green").value = pickerData[1];
+                            document.getElementById("blue").value = pickerData[2];
+                            colorChange();
+                            pen();
+                            break;
+                        case "eraser":
+                            for (let i = -sizeOfPen; i < sizeOfPen + 1; i++) {
+                                for (let j = -sizeOfPen; j < sizeOfPen + 1; j++) {
+                                    if (gridJudgement(e.offsetX, e.offsetY)) {
+                                        ctx.clearRect(Math.floor(e.offsetX / 10) * 10 + i * 10, Math.floor(e.offsetY / 10) * 10 + j * 10, 10, 10);
+                                    }
+                                }
+                            }
+                            break;
+                        case "penki":
+                            /*var originalColor=ctx.getImageData(Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10,1,1).data;
+                            var penkiData=[[[Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10]]];
+                            var count=0;
+                            console.log(penkiData[0].length);
+                            while(penkiData[0].length){
+                            penkiData[1]=[];
+                            console.log(penkiData);
+                            for(let i=0;i<penkiData[0].length;i++){
+                            ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1],10,10);
+                            if(ctx.getImageData(penkiData[0][i][0]-10,penkiData[0][i][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0]-10,penkiData[0][i][1])){
+                            penkiData[1].push([penkiData[0][i][0]-10,penkiData[0][i][1]]);
+                            ctx.fillRect(penkiData[0][i][0]-10,penkiData[0][i][1],10,10);
+                            }
+                            if(ctx.getImageData(penkiData[0][i][0]+10,penkiData[0][i][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0]+10,penkiData[0][i][1])){
+                            penkiData[1].push([penkiData[0][i][0]+10,penkiData[0][i][1]]);
+                            ctx.fillRect(penkiData[0][i][0]+10,penkiData[0][i][1],10,10);
+                            }
+                            if(ctx.getImageData(penkiData[0][i][0],penkiData[0][i][1]-10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0],penkiData[0][i][1]-10)){
+                            penkiData[1].push([penkiData[0][i][0],penkiData[0][i][1]-10]);
+                            ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1]-10,10,10);
+                            }
+                            if(ctx.getImageData(penkiData[0][i][0],penkiData[0][i][1]+10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0],penkiData[0][i][1]+10)){
+                            penkiData[1].push([penkiData[0][i][0],penkiData[0][i][1]+10]);
+                            ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1]+10,10,10);
+                            }
+                            
+                            
+                            }
+                            penkiData.shift();
+                            count++;
+                            if(count>10){
+                            break;
+                            }
+                            }*/
+                            console.log(ImFree);
+                            if (ImFree) {
+                                ImFree = false;
+                                var originalColor = ctx.getImageData(Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10, 1, 1).data.toString();
+                                var penkiData = [[Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10]];
+                                while (penkiData.length) {
+                                    if (ctx.getImageData(penkiData[0][0] - 10, penkiData[0][1], 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0] - 10, penkiData[0][1])) {
+                                        penkiData.push([penkiData[0][0] - 10, penkiData[0][1]]);
+                                        ctx.fillRect(penkiData[0][0] - 10, penkiData[0][1], 10, 10);
+                                    }
+                                    if (ctx.getImageData(penkiData[0][0] + 10, penkiData[0][1], 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0] + 10, penkiData[0][1])) {
+                                        penkiData.push([penkiData[0][0] + 10, penkiData[0][1]]);
+                                        ctx.fillRect(penkiData[0][0] + 10, penkiData[0][1], 10, 10);
+                                    }
+                                    if (ctx.getImageData(penkiData[0][0], penkiData[0][1] - 10, 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0], penkiData[0][1] - 10)) {
+                                        penkiData.push([penkiData[0][0], penkiData[0][1] - 10]);
+                                        ctx.fillRect(penkiData[0][0], penkiData[0][1] - 10, 10, 10);
+                                    }
+                                    if (ctx.getImageData(penkiData[0][0], penkiData[0][1] + 10, 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0], penkiData[0][1] + 10)) {
+                                        penkiData.push([penkiData[0][0], penkiData[0][1] + 10]);
+                                        ctx.fillRect(penkiData[0][0], penkiData[0][1] + 10, 10, 10);
+                                    }
+                                    penkiData.shift();
+                                    console.log(penkiData);
+                                }
+                                ImFree = true;
+                            }
+                            break;
+                    }
+                }
+                pointerCanvas.strokeRect(Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10, 10, 10);
+            }
+        }
+        onmousedown = function (e) {
+            if (masterTime) {
+                console.log("It's master time!!");
+            } else {
+                mouseEffect = true;
+                secondDraw(e);
+            }
+        }
+        onmouseup = () => mouseEffect = false;
+        function colorChange() {
+            color = `#${hex(document.getElementById("red").value)}${hex(document.getElementById("green").value)}${hex(document.getElementById("blue").value)}`;
+            ctx.fillStyle = color;
+            colorP.fillStyle = color;
+            colorP.fillRect(0, 0, 50, 50);
+            sizeOfPen = parseInt(document.getElementById("size").value);
+        }
+        function tick() {                                                                                                                    //copytest
+            for (let k = 0; k < toDownloadData.length; k++) {
+                var a = ctx.getImageData(toDownloadData[k][3] * 10, toDownloadData[k][0], toDownloadData[k][1] * 10, toDownloadData[k][3] * 10);                                      //top
+                var copiedImageData = new ImageData(toDownloadData[k][1], toDownloadData[k][3]);
+                for (let i = 0; i < copiedImageData.height; i++) {
+                    for (let j = 0; j < copiedImageData.width; j++) {
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4] = a.data[i * copiedImageData.width * 400 + j * 40];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 1] = a.data[i * copiedImageData.width * 400 + j * 40 + 1];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 2] = a.data[i * copiedImageData.width * 400 + j * 40 + 2];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 3] = a.data[i * copiedImageData.width * 400 + j * 40 + 3];
+                    }
+                }
+                toDownload.putImageData(copiedImageData, toDownloadData[k][4] + toDownloadData[k][3], toDownloadData[k][5]);                                                                                           //for sides
+                var a = ctx.getImageData(0, toDownloadData[k][0] + toDownloadData[k][3] * 10, (toDownloadData[k][1] + toDownloadData[k][3]) * 20, toDownloadData[k][2] * 10);
+                var copiedImageData = new ImageData((toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                for (let i = 0; i < copiedImageData.height; i++) {
+                    for (let j = 0; j < copiedImageData.width; j++) {
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4] = a.data[i * copiedImageData.width * 400 + j * 40];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 1] = a.data[i * copiedImageData.width * 400 + j * 40 + 1];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 2] = a.data[i * copiedImageData.width * 400 + j * 40 + 2];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 3] = a.data[i * copiedImageData.width * 400 + j * 40 + 3];
+                    }
+                }
+                toDownload.putImageData(copiedImageData, toDownloadData[k][4], toDownloadData[k][5] + toDownloadData[k][3]);
+                var a = ctx.getImageData(toDownloadData[k][3] * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10, toDownloadData[k][1] * 10, toDownloadData[k][3] * 10);                                      //bottom bottomのfor文は逆向きにコピーさせるため特殊になっている
+                var copiedImageData = new ImageData(toDownloadData[k][1], toDownloadData[k][3]);
+                for (let i = 0; i < copiedImageData.height; i++) {
+                    for (let j = 0; j < copiedImageData.width; j++) {
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4] = a.data[i * copiedImageData.width * 400 + j * 40];
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4 + 1] = a.data[i * copiedImageData.width * 400 + j * 40 + 1];
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4 + 2] = a.data[i * copiedImageData.width * 400 + j * 40 + 2];
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4 + 3] = a.data[i * copiedImageData.width * 400 + j * 40 + 3];
+                    }
+                }
+                toDownload.putImageData(copiedImageData, toDownloadData[k][4] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][5]);
+
+                var a = ctx.getImageData(350 + toDownloadData[k][3] * 10, toDownloadData[k][0], toDownloadData[k][1] * 10, toDownloadData[k][3] * 10);                                      //top   layer2
+                var copiedImageData = new ImageData(toDownloadData[k][1], toDownloadData[k][3]);
+                for (let i = 0; i < copiedImageData.height; i++) {
+                    for (let j = 0; j < copiedImageData.width; j++) {
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4] = a.data[i * copiedImageData.width * 400 + j * 40];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 1] = a.data[i * copiedImageData.width * 400 + j * 40 + 1];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 2] = a.data[i * copiedImageData.width * 400 + j * 40 + 2];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 3] = a.data[i * copiedImageData.width * 400 + j * 40 + 3];
+                    }
+                }
+                toDownload.putImageData(copiedImageData, toDownloadData[k][6] + toDownloadData[k][3], toDownloadData[k][7]);                                                                                           //for sides
+                var a = ctx.getImageData(350, toDownloadData[k][0] + toDownloadData[k][3] * 10, (toDownloadData[k][1] + toDownloadData[k][3]) * 20, toDownloadData[k][2] * 10);
+                var copiedImageData = new ImageData((toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                for (let i = 0; i < copiedImageData.height; i++) {
+                    for (let j = 0; j < copiedImageData.width; j++) {
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4] = a.data[i * copiedImageData.width * 400 + j * 40];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 1] = a.data[i * copiedImageData.width * 400 + j * 40 + 1];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 2] = a.data[i * copiedImageData.width * 400 + j * 40 + 2];
+                        copiedImageData.data[(i * copiedImageData.width + j) * 4 + 3] = a.data[i * copiedImageData.width * 400 + j * 40 + 3];
+                    }
+                }
+                toDownload.putImageData(copiedImageData, toDownloadData[k][6], toDownloadData[k][3] + toDownloadData[k][7]);
+                var a = ctx.getImageData(350 + toDownloadData[k][3] * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10, toDownloadData[k][1] * 10, toDownloadData[k][3] * 10);                                      //bottom bottomのfor文は逆向きにコピーさせるため特殊になっている
+                var copiedImageData = new ImageData(toDownloadData[k][1], toDownloadData[k][3]);
+                for (let i = 0; i < copiedImageData.height; i++) {
+                    for (let j = 0; j < copiedImageData.width; j++) {
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4] = a.data[i * copiedImageData.width * 400 + j * 40];
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4 + 1] = a.data[i * copiedImageData.width * 400 + j * 40 + 1];
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4 + 2] = a.data[i * copiedImageData.width * 400 + j * 40 + 2];
+                        copiedImageData.data[((copiedImageData.height - 1 - i) * copiedImageData.width + j) * 4 + 3] = a.data[i * copiedImageData.width * 400 + j * 40 + 3];
+                    }
+                }
+                toDownload.putImageData(copiedImageData, toDownloadData[k][6] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][7]);
+            }
+
+            var skinData = document.getElementById("toDownload").toDataURL("image/png");
+            /*document.getElementById("img").src=skinData;
+            document.getElementById("img").width=150;
+            document.getElementById("img").height=150;*/
+            document.getElementById("download").href = skinData;
+            ThreeDData();
+            ifUploaded();
+        }
+        function hex(e) {
+            var dummyNumber = parseInt(e).toString(16);
+            dummyNumber = (parseInt(dummyNumber, 16) < 16) ? "0" + dummyNumber : dummyNumber;
+            return dummyNumber;
+        }
+        document.getElementById("colorMaster").onmouseover = () => {
+            masterTime = true;
+        }
+        document.getElementById("colorMaster").onmouseleave = () => {
+            masterTime = false;
+        }
+        function pen() {
+            document.getElementById("pen").style.borderColor = "orange";
+            document.getElementById("picker").style.borderColor = "black";
+            document.getElementById("eraser").style.borderColor = "black";
+            document.getElementById("penki").style.borderColor = "black";
+            effectOfPen = "pen";
+        }
+        function picker() {
+            effectOfPen = "picker";
+        }
+        function eraser() {
+            effectOfPen = "eraser";
+        }
+        function penki() {
+            effectOfPen = "penki";
+        }
 
 
-}
-penkiData.shift();
-count++;
-if(count>10){
-break;
-}
-}*/
-console.log(ImFree);
-if(ImFree){
-ImFree=false;
-var originalColor=ctx.getImageData(Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10,1,1).data.toString();
-var penkiData=[[Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10]];
-while(penkiData.length){
-if(ctx.getImageData(penkiData[0][0]-10,penkiData[0][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][0]-10,penkiData[0][1])){
-penkiData.push([penkiData[0][0]-10,penkiData[0][1]]);
-ctx.fillRect(penkiData[0][0]-10,penkiData[0][1],10,10);
-}
-if(ctx.getImageData(penkiData[0][0]+10,penkiData[0][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][0]+10,penkiData[0][1])){
-penkiData.push([penkiData[0][0]+10,penkiData[0][1]]);
-ctx.fillRect(penkiData[0][0]+10,penkiData[0][1],10,10);
-}
-if(ctx.getImageData(penkiData[0][0],penkiData[0][1]-10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][0],penkiData[0][1]-10)){
-penkiData.push([penkiData[0][0],penkiData[0][1]-10]);
-ctx.fillRect(penkiData[0][0],penkiData[0][1]-10,10,10);
-}
-if(ctx.getImageData(penkiData[0][0],penkiData[0][1]+10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][0],penkiData[0][1]+10)){
-penkiData.push([penkiData[0][0],penkiData[0][1]+10]);
-ctx.fillRect(penkiData[0][0],penkiData[0][1]+10,10,10);
-}
-penkiData.shift();
-console.log(penkiData);
-}
-ImFree=true;
-}
-break;
-}
-}
-pointerCanvas.strokeRect(Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10,10,10);
-}
-}
-onmousedown=function(e){
-if(masterTime){
-console.log("It's master time!!");
-}else{
-mouseEffect=true;
-secondDraw(e);
-}
-}
-onmouseup=()=> mouseEffect=false;
-function colorChange(){
-color=`#${hex(document.getElementById("red").value)}${hex(document.getElementById("green").value)}${hex(document.getElementById("blue").value)}`;
-ctx.fillStyle=color;
-colorP.fillStyle=color;
-colorP.fillRect(0,0,50,50);
-sizeOfPen=parseInt(document.getElementById("size").value);
-}
-function tick(){                                                                                                                    //copytest
-for(let k=0;k<toDownloadData.length;k++){
-var a=ctx.getImageData(toDownloadData[k][3]*10,toDownloadData[k][0],toDownloadData[k][1]*10,toDownloadData[k][3]*10);                                      //top
-var copiedImageData=new ImageData(toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<copiedImageData.height;i++){
-for(let j=0;j<copiedImageData.width;j++){
-copiedImageData.data[(i*copiedImageData.width+j)*4]=a.data[i*copiedImageData.width*400+j*40];
-copiedImageData.data[(i*copiedImageData.width+j)*4+1]=a.data[i*copiedImageData.width*400+j*40+1];
-copiedImageData.data[(i*copiedImageData.width+j)*4+2]=a.data[i*copiedImageData.width*400+j*40+2];
-copiedImageData.data[(i*copiedImageData.width+j)*4+3]=a.data[i*copiedImageData.width*400+j*40+3];
-}
-}
-toDownload.putImageData(copiedImageData,toDownloadData[k][4]+toDownloadData[k][3],toDownloadData[k][5]);                                                                                           //for sides
-var a=ctx.getImageData(0,toDownloadData[k][0]+toDownloadData[k][3]*10,(toDownloadData[k][1]+toDownloadData[k][3])*20,toDownloadData[k][2]*10);
-var copiedImageData=new ImageData((toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-for(let i=0;i<copiedImageData.height;i++){
-for(let j=0;j<copiedImageData.width;j++){
-copiedImageData.data[(i*copiedImageData.width+j)*4]=a.data[i*copiedImageData.width*400+j*40];
-copiedImageData.data[(i*copiedImageData.width+j)*4+1]=a.data[i*copiedImageData.width*400+j*40+1];
-copiedImageData.data[(i*copiedImageData.width+j)*4+2]=a.data[i*copiedImageData.width*400+j*40+2];
-copiedImageData.data[(i*copiedImageData.width+j)*4+3]=a.data[i*copiedImageData.width*400+j*40+3];
-}
-}
-toDownload.putImageData(copiedImageData,toDownloadData[k][4],toDownloadData[k][5]+toDownloadData[k][3]);
-var a=ctx.getImageData(toDownloadData[k][3]*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10,toDownloadData[k][1]*10,toDownloadData[k][3]*10);                                      //bottom bottomのfor文は逆向きにコピーさせるため特殊になっている
-var copiedImageData=new ImageData(toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<copiedImageData.height;i++){
-for(let j=0;j<copiedImageData.width;j++){
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4]=a.data[i*copiedImageData.width*400+j*40];
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4+1]=a.data[i*copiedImageData.width*400+j*40+1];
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4+2]=a.data[i*copiedImageData.width*400+j*40+2];
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4+3]=a.data[i*copiedImageData.width*400+j*40+3];
-}
-}
-toDownload.putImageData(copiedImageData,toDownloadData[k][4]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][5]);
-
-var a=ctx.getImageData(350+toDownloadData[k][3]*10,toDownloadData[k][0],toDownloadData[k][1]*10,toDownloadData[k][3]*10);                                      //top   layer2
-var copiedImageData=new ImageData(toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<copiedImageData.height;i++){
-for(let j=0;j<copiedImageData.width;j++){
-copiedImageData.data[(i*copiedImageData.width+j)*4]=a.data[i*copiedImageData.width*400+j*40];
-copiedImageData.data[(i*copiedImageData.width+j)*4+1]=a.data[i*copiedImageData.width*400+j*40+1];
-copiedImageData.data[(i*copiedImageData.width+j)*4+2]=a.data[i*copiedImageData.width*400+j*40+2];
-copiedImageData.data[(i*copiedImageData.width+j)*4+3]=a.data[i*copiedImageData.width*400+j*40+3];
-}
-}
-toDownload.putImageData(copiedImageData,toDownloadData[k][6]+toDownloadData[k][3],toDownloadData[k][7]);                                                                                           //for sides
-var a=ctx.getImageData(350,toDownloadData[k][0]+toDownloadData[k][3]*10,(toDownloadData[k][1]+toDownloadData[k][3])*20,toDownloadData[k][2]*10);
-var copiedImageData=new ImageData((toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-for(let i=0;i<copiedImageData.height;i++){
-for(let j=0;j<copiedImageData.width;j++){
-copiedImageData.data[(i*copiedImageData.width+j)*4]=a.data[i*copiedImageData.width*400+j*40];
-copiedImageData.data[(i*copiedImageData.width+j)*4+1]=a.data[i*copiedImageData.width*400+j*40+1];
-copiedImageData.data[(i*copiedImageData.width+j)*4+2]=a.data[i*copiedImageData.width*400+j*40+2];
-copiedImageData.data[(i*copiedImageData.width+j)*4+3]=a.data[i*copiedImageData.width*400+j*40+3];
-}
-}
-toDownload.putImageData(copiedImageData,toDownloadData[k][6],toDownloadData[k][3]+toDownloadData[k][7]);
-var a=ctx.getImageData(350+toDownloadData[k][3]*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10,toDownloadData[k][1]*10,toDownloadData[k][3]*10);                                      //bottom bottomのfor文は逆向きにコピーさせるため特殊になっている
-var copiedImageData=new ImageData(toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<copiedImageData.height;i++){
-for(let j=0;j<copiedImageData.width;j++){
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4]=a.data[i*copiedImageData.width*400+j*40];
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4+1]=a.data[i*copiedImageData.width*400+j*40+1];
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4+2]=a.data[i*copiedImageData.width*400+j*40+2];
-copiedImageData.data[((copiedImageData.height-1-i)*copiedImageData.width+j)*4+3]=a.data[i*copiedImageData.width*400+j*40+3];
-}
-}
-toDownload.putImageData(copiedImageData,toDownloadData[k][6]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][7]);
-}
-
-var skinData=document.getElementById("toDownload").toDataURL("image/png");
-/*document.getElementById("img").src=skinData;
-document.getElementById("img").width=150;
-document.getElementById("img").height=150;*/
-document.getElementById("download").href=skinData;
-ThreeDData();
-ifUploaded();
-}
-function hex(e){
-var dummyNumber=parseInt(e).toString(16);
-dummyNumber=(parseInt(dummyNumber,16)<16)?"0"+dummyNumber:dummyNumber;
-return dummyNumber;
-}
-document.getElementById("colorMaster").onmouseover=()=>{
-masterTime=true;
-}
-document.getElementById("colorMaster").onmouseleave=()=>{
-masterTime=false;
-}
-function pen(){
-document.getElementById("pen").style.borderColor="orange";
-document.getElementById("picker").style.borderColor="black";
-document.getElementById("eraser").style.borderColor="black";
-document.getElementById("penki").style.borderColor="black";
-effectOfPen="pen";
-}
-function picker(){
-effectOfPen="picker";
-}
-function eraser(){
-effectOfPen="eraser";
-}
-function penki(){
-effectOfPen="penki";
-}
+        //未完成　textureをキャンバスからdataurlにして張ろうっていう試み。
+        function ThreeDData() {
+            for (let i = 0; i < 6; i++) {
+                var to3Dctx = canvasToTexture[i][4].getContext("2d");
+                canvasToTexture[i][4].width = toDownloadData[i][1] * 10;
+                canvasToTexture[i][4].height = toDownloadData[i][2] * 10;
+                var px = ctx.getImageData(0 + toDownloadData[i][3] * 10, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][1] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(px, 0, 0);
+                parts[i].material[4].map = new THREE.CanvasTexture(canvasToTexture[i][4]);
+                parts[i].material[4].map.needsUpdate = true;
 
 
-//未完成　textureをキャンバスからdataurlにして張ろうっていう試み。
-function ThreeDData(){
-for(let i=0;i<6;i++){
-var to3Dctx=canvasToTexture[i][4].getContext("2d");
-canvasToTexture[i][4].width=toDownloadData[i][1]*10;
-canvasToTexture[i][4].height=toDownloadData[i][2]*10;
-var px=ctx.getImageData(0+toDownloadData[i][3]*10,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][1]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(px,0,0);
-parts[i].material[4].map = new THREE.CanvasTexture(canvasToTexture[i][4]);
-parts[i].material[4].map.needsUpdate=true;
+                var to3Dctx = canvasToTexture[i][5].getContext("2d");
+                canvasToTexture[i][5].width = toDownloadData[i][1] * 10;
+                canvasToTexture[i][5].height = toDownloadData[i][2] * 10;
+                var dx = ctx.getImageData(0 + (toDownloadData[i][1] + toDownloadData[i][3] * 2) * 10, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][1] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(dx, 0, 0);
+                parts[i].material[5].map = new THREE.CanvasTexture(canvasToTexture[i][5]);
+                parts[i].material[5].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture[i][2].getContext("2d");
+                canvasToTexture[i][2].width = toDownloadData[i][1] * 10;
+                canvasToTexture[i][2].height = toDownloadData[i][3] * 10;
+                var py = ctx.getImageData(0 + toDownloadData[i][3] * 10, toDownloadData[i][0], toDownloadData[i][1] * 10, toDownloadData[i][3] * 10);
+                to3Dctx.putImageData(py, 0, 0);
+                parts[i].material[2].map = new THREE.CanvasTexture(canvasToTexture[i][2]);
+                parts[i].material[2].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture[i][3].getContext("2d");
+                canvasToTexture[i][3].width = toDownloadData[i][1] * 10;
+                canvasToTexture[i][3].height = toDownloadData[i][3] * 10;
+                var dy = ctx.getImageData(0 + toDownloadData[i][3] * 10, toDownloadData[i][0] + (toDownloadData[i][2] + toDownloadData[i][3]) * 10, toDownloadData[i][1] * 10, toDownloadData[i][3] * 10);
+                to3Dctx.putImageData(dy, 0, 0);
+                parts[i].material[3].map = new THREE.CanvasTexture(canvasToTexture[i][3]);
+                parts[i].material[3].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture[i][1].getContext("2d");
+                canvasToTexture[i][1].width = toDownloadData[i][3] * 10;
+                canvasToTexture[i][1].height = toDownloadData[i][2] * 10;
+                var pz = ctx.getImageData(0, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][3] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(pz, 0, 0);
+                parts[i].material[1].map = new THREE.CanvasTexture(canvasToTexture[i][1]);
+                parts[i].material[1].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture[i][0].getContext("2d");
+                canvasToTexture[i][0].width = toDownloadData[i][3] * 10;
+                canvasToTexture[i][0].height = toDownloadData[i][2] * 10;
+                var dz = ctx.getImageData(0 + (toDownloadData[i][3] + toDownloadData[i][1]) * 10, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][3] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(dz, 0, 0);
+                parts[i].material[0].map = new THREE.CanvasTexture(canvasToTexture[i][0]);
+                parts[i].material[0].map.needsUpdate = true;
+            }
 
 
-var to3Dctx=canvasToTexture[i][5].getContext("2d");
-canvasToTexture[i][5].width=toDownloadData[i][1]*10;
-canvasToTexture[i][5].height=toDownloadData[i][2]*10;
-var dx=ctx.getImageData(0+(toDownloadData[i][1]+toDownloadData[i][3]*2)*10,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][1]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(dx,0,0);
-parts[i].material[5].map = new THREE.CanvasTexture(canvasToTexture[i][5]);
-parts[i].material[5].map.needsUpdate=true;
-
-var to3Dctx=canvasToTexture[i][2].getContext("2d");
-canvasToTexture[i][2].width=toDownloadData[i][1]*10;
-canvasToTexture[i][2].height=toDownloadData[i][3]*10;
-var py=ctx.getImageData(0+toDownloadData[i][3]*10,toDownloadData[i][0],toDownloadData[i][1]*10,toDownloadData[i][3]*10);
-to3Dctx.putImageData(py,0,0);
-parts[i].material[2].map = new THREE.CanvasTexture(canvasToTexture[i][2]);
-parts[i].material[2].map.needsUpdate=true;
-
-var to3Dctx=canvasToTexture[i][3].getContext("2d");
-canvasToTexture[i][3].width=toDownloadData[i][1]*10;
-canvasToTexture[i][3].height=toDownloadData[i][3]*10;
-var dy=ctx.getImageData(0+toDownloadData[i][3]*10,toDownloadData[i][0]+(toDownloadData[i][2]+toDownloadData[i][3])*10,toDownloadData[i][1]*10,toDownloadData[i][3]*10);
-to3Dctx.putImageData(dy,0,0);
-parts[i].material[3].map = new THREE.CanvasTexture(canvasToTexture[i][3]);
-parts[i].material[3].map.needsUpdate=true;
-
-var to3Dctx=canvasToTexture[i][1].getContext("2d");
-canvasToTexture[i][1].width=toDownloadData[i][3]*10;
-canvasToTexture[i][1].height=toDownloadData[i][2]*10;
-var pz=ctx.getImageData(0,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][3]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(pz,0,0);
-parts[i].material[1].map = new THREE.CanvasTexture(canvasToTexture[i][1]);
-parts[i].material[1].map.needsUpdate=true;
-
-var to3Dctx=canvasToTexture[i][0].getContext("2d");
-canvasToTexture[i][0].width=toDownloadData[i][3]*10;
-canvasToTexture[i][0].height=toDownloadData[i][2]*10;
-var dz=ctx.getImageData(0+(toDownloadData[i][3]+toDownloadData[i][1])*10,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][3]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(dz,0,0);
-parts[i].material[0].map = new THREE.CanvasTexture(canvasToTexture[i][0]);
-parts[i].material[0].map.needsUpdate=true;
-}
+            for (let i = 0; i < 6; i++) {
+                var to3Dctx = canvasToTexture2[i][4].getContext("2d");
+                canvasToTexture2[i][4].width = toDownloadData[i][1] * 10;
+                canvasToTexture2[i][4].height = toDownloadData[i][2] * 10;
+                var px = ctx.getImageData(350 + toDownloadData[i][3] * 10, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][1] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(px, 0, 0);
+                parts2[i].material[4].map = new THREE.CanvasTexture(canvasToTexture2[i][4]);
+                parts2[i].material[4].map.needsUpdate = true;
 
 
-for(let i=0;i<6;i++){
-var to3Dctx=canvasToTexture2[i][4].getContext("2d");
-canvasToTexture2[i][4].width=toDownloadData[i][1]*10;
-canvasToTexture2[i][4].height=toDownloadData[i][2]*10;
-var px=ctx.getImageData(350+toDownloadData[i][3]*10,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][1]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(px,0,0);
-parts2[i].material[4].map = new THREE.CanvasTexture(canvasToTexture2[i][4]);
-parts2[i].material[4].map.needsUpdate=true;
+                var to3Dctx = canvasToTexture2[i][5].getContext("2d");
+                canvasToTexture2[i][5].width = toDownloadData[i][1] * 10;
+                canvasToTexture2[i][5].height = toDownloadData[i][2] * 10;
+                var dx = ctx.getImageData(350 + (toDownloadData[i][1] + toDownloadData[i][3] * 2) * 10, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][1] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(dx, 0, 0);
+                parts2[i].material[5].map = new THREE.CanvasTexture(canvasToTexture2[i][5]);
+                parts2[i].material[5].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture2[i][2].getContext("2d");
+                canvasToTexture2[i][2].width = toDownloadData[i][1] * 10;
+                canvasToTexture2[i][2].height = toDownloadData[i][3] * 10;
+                var py = ctx.getImageData(350 + toDownloadData[i][3] * 10, toDownloadData[i][0], toDownloadData[i][1] * 10, toDownloadData[i][3] * 10);
+                to3Dctx.putImageData(py, 0, 0);
+                parts2[i].material[2].map = new THREE.CanvasTexture(canvasToTexture2[i][2]);
+                parts2[i].material[2].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture2[i][3].getContext("2d");
+                canvasToTexture2[i][3].width = toDownloadData[i][1] * 10;
+                canvasToTexture2[i][3].height = toDownloadData[i][3] * 10;
+                var dy = ctx.getImageData(350 + toDownloadData[i][3] * 10, toDownloadData[i][0] + (toDownloadData[i][2] + toDownloadData[i][3]) * 10, toDownloadData[i][1] * 10, toDownloadData[i][3] * 10);
+                to3Dctx.putImageData(dy, 0, 0);
+                parts2[i].material[3].map = new THREE.CanvasTexture(canvasToTexture2[i][3]);
+                parts2[i].material[3].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture2[i][1].getContext("2d");
+                canvasToTexture2[i][1].width = toDownloadData[i][3] * 10;
+                canvasToTexture2[i][1].height = toDownloadData[i][2] * 10;
+                var pz = ctx.getImageData(350, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][3] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(pz, 0, 0);
+                parts2[i].material[1].map = new THREE.CanvasTexture(canvasToTexture2[i][1]);
+                parts2[i].material[1].map.needsUpdate = true;
+
+                var to3Dctx = canvasToTexture2[i][0].getContext("2d");
+                canvasToTexture2[i][0].width = toDownloadData[i][3] * 10;
+                canvasToTexture2[i][0].height = toDownloadData[i][2] * 10;
+                var dz = ctx.getImageData(350 + (toDownloadData[i][3] + toDownloadData[i][1]) * 10, toDownloadData[i][0] + toDownloadData[i][3] * 10, toDownloadData[i][3] * 10, toDownloadData[i][2] * 10);
+                to3Dctx.putImageData(dz, 0, 0);
+                parts2[i].material[0].map = new THREE.CanvasTexture(canvasToTexture2[i][0]);
+                parts2[i].material[0].map.needsUpdate = true;
 
 
-var to3Dctx=canvasToTexture2[i][5].getContext("2d");
-canvasToTexture2[i][5].width=toDownloadData[i][1]*10;
-canvasToTexture2[i][5].height=toDownloadData[i][2]*10;
-var dx=ctx.getImageData(350+(toDownloadData[i][1]+toDownloadData[i][3]*2)*10,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][1]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(dx,0,0);
-parts2[i].material[5].map = new THREE.CanvasTexture(canvasToTexture2[i][5]);
-parts2[i].material[5].map.needsUpdate=true;
+                //console.log(pz);
+                /*scene.remove(head);
+                for(let i=0;i<mat.length;i++){
+                mat[i].dispose();
+                }
+                //mat=[new THREE.MeshBasicMaterial({transparent:true,map:textureDz}),new THREE.MeshBasicMaterial({transparent:true,map:texturePz}),new THREE.MeshBasicMaterial({transparent:true,map:texturePy}),new THREE.MeshBasicMaterial({color:0x888888,map:textureDy}),new THREE.MeshBasicMaterial({transparent:true,map:texturePx}),new THREE.MeshBasicMaterial({transparent:true,map:textureDx})];
+                //mat=[new THREE.MeshBasicMaterial({color:0xff0000,map:texturePz}),new THREE.MeshBasicMaterial({color:0x00ff00,map:textureDz}),new THREE.MeshBasicMaterial({map:texturePy}),new THREE.MeshBasicMaterial({color:0x000000}),new THREE.MeshBasicMaterial({color:0xffffff}),new THREE.MeshBasicMaterial({color:0x888888})];
+                
+                var head=new THREE.Mesh(geo,mat);
+                scene.add(head);*/
+            }
 
-var to3Dctx=canvasToTexture2[i][2].getContext("2d");
-canvasToTexture2[i][2].width=toDownloadData[i][1]*10;
-canvasToTexture2[i][2].height=toDownloadData[i][3]*10;
-var py=ctx.getImageData(350+toDownloadData[i][3]*10,toDownloadData[i][0],toDownloadData[i][1]*10,toDownloadData[i][3]*10);
-to3Dctx.putImageData(py,0,0);
-parts2[i].material[2].map = new THREE.CanvasTexture(canvasToTexture2[i][2]);
-parts2[i].material[2].map.needsUpdate=true;
+            rendering();
+        }
 
-var to3Dctx=canvasToTexture2[i][3].getContext("2d");
-canvasToTexture2[i][3].width=toDownloadData[i][1]*10;
-canvasToTexture2[i][3].height=toDownloadData[i][3]*10;
-var dy=ctx.getImageData(350+toDownloadData[i][3]*10,toDownloadData[i][0]+(toDownloadData[i][2]+toDownloadData[i][3])*10,toDownloadData[i][1]*10,toDownloadData[i][3]*10);
-to3Dctx.putImageData(dy,0,0);
-parts2[i].material[3].map = new THREE.CanvasTexture(canvasToTexture2[i][3]);
-parts2[i].material[3].map.needsUpdate=true;
+        function gridJudgement(x, y) {
+            for (let i = 0; i < toDownloadData.length; i++) {
+                if (x >= 0 && x <= (toDownloadData[i][1] + toDownloadData[i][3]) * 20 - 1 && y >= toDownloadData[i][0] + toDownloadData[i][3] * 10 && y <= toDownloadData[i][0] + (toDownloadData[i][3] + toDownloadData[i][2]) * 10 - 1 || x >= toDownloadData[i][3] * 10 && x <= (toDownloadData[i][3] + toDownloadData[i][1]) * 10 - 1 && y >= toDownloadData[i][0] && y <= toDownloadData[i][0] + (toDownloadData[i][3] * 2 + toDownloadData[i][2]) * 10 - 1 ||
+                    x >= 350 && x <= (toDownloadData[i][1] + toDownloadData[i][3]) * 20 - 1 + 350 && y >= toDownloadData[i][0] + toDownloadData[i][3] * 10 && y <= toDownloadData[i][0] + (toDownloadData[i][3] + toDownloadData[i][2]) * 10 - 1 || x >= toDownloadData[i][3] * 10 + 350 && x <= (toDownloadData[i][3] + toDownloadData[i][1]) * 10 - 1 + 350 && y >= toDownloadData[i][0] && y <= toDownloadData[i][0] + (toDownloadData[i][3] * 2 + toDownloadData[i][2]) * 10 - 1) {
+                    //console.log("true");
+                    return true;
+                }
+            }
+            return false;
+        }
 
-var to3Dctx=canvasToTexture2[i][1].getContext("2d");
-canvasToTexture2[i][1].width=toDownloadData[i][3]*10;
-canvasToTexture2[i][1].height=toDownloadData[i][2]*10;
-var pz=ctx.getImageData(350,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][3]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(pz,0,0);
-parts2[i].material[1].map = new THREE.CanvasTexture(canvasToTexture2[i][1]);
-parts2[i].material[1].map.needsUpdate=true;
+        function rendering() {
+            r += Math.PI / 90;
+            camera.position.set(Math.sin(r) * 400, 200, Math.cos(r) * 400);
+            camera.lookAt(new THREE.Vector3(0, 0, 0));
+            renderer.render(scene, camera);
+        }
+        function upload() {
+            document.getElementById("uploader").click();
+        }
+        document.getElementById("uploader").onchange = () => {
+            fileReader.readAsDataURL(document.getElementById("uploader").files[0]);
+            console.log("a");
+        }
+        fileReader.onload = function () {
+            console.log("b");
+            console.log(fileReader.result);
+            uploadImage.src = fileReader.result;
+            uploaded = true;
+        }
+        function ifUploaded() {
+            if (uploaded) {
+                console.log("c");
+                toDownload.clearRect(0, 0, 64, 64);
+                toDownload.drawImage(uploadImage, 0, 0);
+                for (let k = 0; k < 6; k++) {
+                    var a = toDownload.getImageData(toDownloadData[k][4] + toDownloadData[k][3], toDownloadData[k][5], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + i * 10, 10, 10);
+                        }
+                    }
 
-var to3Dctx=canvasToTexture2[i][0].getContext("2d");
-canvasToTexture2[i][0].width=toDownloadData[i][3]*10;
-canvasToTexture2[i][0].height=toDownloadData[i][2]*10;
-var dz=ctx.getImageData(350+(toDownloadData[i][3]+toDownloadData[i][1])*10,toDownloadData[i][0]+toDownloadData[i][3]*10,toDownloadData[i][3]*10,toDownloadData[i][2]*10);
-to3Dctx.putImageData(dz,0,0);
-parts2[i].material[0].map = new THREE.CanvasTexture(canvasToTexture2[i][0]);
-parts2[i].material[0].map.needsUpdate=true;
+                    var a = toDownload.getImageData(toDownloadData[k][4], toDownloadData[k][5] + toDownloadData[k][3], (toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                    console.log(a);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(0 + j * 10, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                            ctx.fillRect(0 + j * 10, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                        }
+                    }
 
-
-//console.log(pz);
-/*scene.remove(head);
-for(let i=0;i<mat.length;i++){
-mat[i].dispose();
-}
-//mat=[new THREE.MeshBasicMaterial({transparent:true,map:textureDz}),new THREE.MeshBasicMaterial({transparent:true,map:texturePz}),new THREE.MeshBasicMaterial({transparent:true,map:texturePy}),new THREE.MeshBasicMaterial({color:0x888888,map:textureDy}),new THREE.MeshBasicMaterial({transparent:true,map:texturePx}),new THREE.MeshBasicMaterial({transparent:true,map:textureDx})];
-//mat=[new THREE.MeshBasicMaterial({color:0xff0000,map:texturePz}),new THREE.MeshBasicMaterial({color:0x00ff00,map:textureDz}),new THREE.MeshBasicMaterial({map:texturePy}),new THREE.MeshBasicMaterial({color:0x000000}),new THREE.MeshBasicMaterial({color:0xffffff}),new THREE.MeshBasicMaterial({color:0x888888})];
-
-var head=new THREE.Mesh(geo,mat);
-scene.add(head);*/
-}
-
-rendering();
-}
-
-function gridJudgement(x,y){
-for(let i=0;i<toDownloadData.length;i++){
-if(x>=0&&x<=(toDownloadData[i][1]+toDownloadData[i][3])*20-1&&y>=toDownloadData[i][0]+toDownloadData[i][3]*10&&y<=toDownloadData[i][0]+(toDownloadData[i][3]+toDownloadData[i][2])*10-1||x>=toDownloadData[i][3]*10&&x<=(toDownloadData[i][3]+toDownloadData[i][1])*10-1&&y>=toDownloadData[i][0]&&y<=toDownloadData[i][0]+(toDownloadData[i][3]*2+toDownloadData[i][2])*10-1||
-x>=350&&x<=(toDownloadData[i][1]+toDownloadData[i][3])*20-1+350&&y>=toDownloadData[i][0]+toDownloadData[i][3]*10&&y<=toDownloadData[i][0]+(toDownloadData[i][3]+toDownloadData[i][2])*10-1||x>=toDownloadData[i][3]*10+350&&x<=(toDownloadData[i][3]+toDownloadData[i][1])*10-1+350&&y>=toDownloadData[i][0]&&y<=toDownloadData[i][0]+(toDownloadData[i][3]*2+toDownloadData[i][2])*10-1){
-//console.log("true");
-return true;
-}
-}
-return false;
-}
-
-function rendering(){
-r+=Math.PI/90;
-camera.position.set(Math.sin(r)*400,200,Math.cos(r)*400);
-camera.lookAt(new THREE.Vector3(0,0,0));
-renderer.render(scene,camera);
-}
-function upload(){
-document.getElementById("uploader").click();
-}
-document.getElementById("uploader").onchange=()=>{
-fileReader.readAsDataURL(document.getElementById("uploader").files[0]);
-console.log("a");
-}
-fileReader.onload=function(){
-console.log("b");
-console.log(fileReader.result);
-uploadImage.src=fileReader.result;
-uploaded=true;
-}
-function ifUploaded(){
-if(uploaded){
-console.log("c");
-toDownload.clearRect(0,0,64,64);
-toDownload.drawImage(uploadImage,0,0);
-for(let k=0;k<6;k++){
-var a=toDownload.getImageData(toDownloadData[k][4]+toDownloadData[k][3],toDownloadData[k][5],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+i*10,10,10);
-}
-}
-
-var a=toDownload.getImageData(toDownloadData[k][4],toDownloadData[k][5]+toDownloadData[k][3],(toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-console.log(a);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(0+j*10,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-ctx.fillRect(0+j*10,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-}
-}
-
-var a=toDownload.getImageData(toDownloadData[k][4]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][5],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+1])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+2]);
-ctx.globalAlpha=a.data[((a.height-1-i)*a.width+a.width-1-j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][4] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][5], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 1]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                        }
+                    }
 
 
-var a=toDownload.getImageData(toDownloadData[k][6]+toDownloadData[k][3],toDownloadData[k][7],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][6] + toDownloadData[k][3], toDownloadData[k][7], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + i * 10, 10, 10);
+                        }
+                    }
 
-var a=toDownload.getImageData(toDownloadData[k][6],toDownloadData[k][3]+toDownloadData[k][7],(toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(0+j*10+350,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-ctx.fillRect(0+j*10+350,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][6], toDownloadData[k][3] + toDownloadData[k][7], (toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(0 + j * 10 + 350, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                            ctx.fillRect(0 + j * 10 + 350, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                        }
+                    }
 
-var a=toDownload.getImageData(toDownloadData[k][6]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][7],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+1])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+2]);
-ctx.globalAlpha=a.data[((a.height-1-i)*a.width+a.width-1-j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-}
-}
-}
-ctx.globalAlpha=1;
-uploaded=false;
-}
-}
-ImFree=true;
-function initSkin(){
-if(toDownloadData[2][1]==3){
-let defaultSkinData=new ImageData(64,64);
-for(let i=0;i<alexData.length;i++)
-defaultSkinData.data[i]=alexData[i];
-toDownload.putImageData(defaultSkinData,0,0);
-for(let k=0;k<6;k++){
-var a=toDownload.getImageData(toDownloadData[k][4]+toDownloadData[k][3],toDownloadData[k][5],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][6] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][7], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 1]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+                uploaded = false;
+            }
+        }
+        ImFree = true;
+        function initSkin() {
+            if (toDownloadData[2][1] == 3) {
+                let defaultSkinData = new ImageData(64, 64);
+                for (let i = 0; i < alexData.length; i++)
+                    defaultSkinData.data[i] = alexData[i];
+                toDownload.putImageData(defaultSkinData, 0, 0);
+                for (let k = 0; k < 6; k++) {
+                    var a = toDownload.getImageData(toDownloadData[k][4] + toDownloadData[k][3], toDownloadData[k][5], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + i * 10, 10, 10);
+                        }
+                    }
 
-var a=toDownload.getImageData(toDownloadData[k][4],toDownloadData[k][5]+toDownloadData[k][3],(toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-console.log(a);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(0+j*10,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-ctx.fillRect(0+j*10,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][4], toDownloadData[k][5] + toDownloadData[k][3], (toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                    console.log(a);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(0 + j * 10, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                            ctx.fillRect(0 + j * 10, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                        }
+                    }
 
-var a=toDownload.getImageData(toDownloadData[k][4]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][5],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+1])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+2]);
-ctx.globalAlpha=a.data[((a.height-1-i)*a.width+a.width-1-j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-}
-}
-
-
-var a=toDownload.getImageData(toDownloadData[k][6]+toDownloadData[k][3],toDownloadData[k][7],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+i*10,10,10);
-}
-}
-
-var a=toDownload.getImageData(toDownloadData[k][6],toDownloadData[k][3]+toDownloadData[k][7],(toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(0+j*10+350,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-ctx.fillRect(0+j*10+350,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-}
-}
-
-var a=toDownload.getImageData(toDownloadData[k][6]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][7],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+1])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+2]);
-ctx.globalAlpha=a.data[((a.height-1-i)*a.width+a.width-1-j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-}
-}
-}
-ctx.globalAlpha=1;
-uploaded=false;
-}else{
-let defaultSkinData=new ImageData(64,64);
-for(let i=0;i<steveData.length;i++)
-defaultSkinData.data[i]=steveData[i];
-toDownload.putImageData(defaultSkinData,0,0);
-for(let k=0;k<6;k++){
-var a=toDownload.getImageData(toDownloadData[k][4]+toDownloadData[k][3],toDownloadData[k][5],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+i*10,10,10);
-}
-}
-
-var a=toDownload.getImageData(toDownloadData[k][4],toDownloadData[k][5]+toDownloadData[k][3],(toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-console.log(a);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(0+j*10,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-ctx.fillRect(0+j*10,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-}
-}
-
-var a=toDownload.getImageData(toDownloadData[k][4]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][5],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+1])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+2]);
-ctx.globalAlpha=a.data[((a.height-1-i)*a.width+a.width-1-j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][4] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][5], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 1]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                        }
+                    }
 
 
-var a=toDownload.getImageData(toDownloadData[k][6]+toDownloadData[k][3],toDownloadData[k][7],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][6] + toDownloadData[k][3], toDownloadData[k][7], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + i * 10, 10, 10);
+                        }
+                    }
 
-var a=toDownload.getImageData(toDownloadData[k][6],toDownloadData[k][3]+toDownloadData[k][7],(toDownloadData[k][1]+toDownloadData[k][3])*2,toDownloadData[k][2]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[(i*a.width+j)*4])+hex(a.data[(i*a.width+j)*4+1])+hex(a.data[(i*a.width+j)*4+2]);
-ctx.globalAlpha=a.data[(i*a.width+j)*4+3]/255;
-ctx.clearRect(0+j*10+350,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-ctx.fillRect(0+j*10+350,toDownloadData[k][0]+toDownloadData[k][3]*10+i*10,10,10);
-}
-}
+                    var a = toDownload.getImageData(toDownloadData[k][6], toDownloadData[k][3] + toDownloadData[k][7], (toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(0 + j * 10 + 350, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                            ctx.fillRect(0 + j * 10 + 350, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                        }
+                    }
 
-var a=toDownload.getImageData(toDownloadData[k][6]+toDownloadData[k][3]+toDownloadData[k][1],toDownloadData[k][7],toDownloadData[k][1],toDownloadData[k][3]);
-for(let i=0;i<a.height;i++){
-for(let j=0;j<a.width;j++){
-ctx.fillStyle="#"+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+1])+hex(a.data[((a.height-1-i)*a.width+a.width-1-j)*4+2]);
-ctx.globalAlpha=a.data[((a.height-1-i)*a.width+a.width-1-j)*4+3]/255;
-ctx.clearRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-ctx.fillRect(toDownloadData[k][3]*10+j*10+350,toDownloadData[k][0]+(toDownloadData[k][2]+toDownloadData[k][3])*10+i*10,10,10);
-}
-}
-}
-ctx.globalAlpha=1;
-uploaded=false;
-}
-}
-if(window.confirm("っていうかデフォルトスキン用意する?")){
-let skinTimer=setTimeout(initSkin,100);
-}
-timer=setInterval(tick,100);
+                    var a = toDownload.getImageData(toDownloadData[k][6] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][7], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 1]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+                uploaded = false;
+            } else {
+                let defaultSkinData = new ImageData(64, 64);
+                for (let i = 0; i < steveData.length; i++)
+                    defaultSkinData.data[i] = steveData[i];
+                toDownload.putImageData(defaultSkinData, 0, 0);
+                for (let k = 0; k < 6; k++) {
+                    var a = toDownload.getImageData(toDownloadData[k][4] + toDownloadData[k][3], toDownloadData[k][5], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + i * 10, 10, 10);
+                        }
+                    }
+
+                    var a = toDownload.getImageData(toDownloadData[k][4], toDownloadData[k][5] + toDownloadData[k][3], (toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                    console.log(a);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(0 + j * 10, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                            ctx.fillRect(0 + j * 10, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                        }
+                    }
+
+                    var a = toDownload.getImageData(toDownloadData[k][4] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][5], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 1]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                        }
+                    }
+
+
+                    var a = toDownload.getImageData(toDownloadData[k][6] + toDownloadData[k][3], toDownloadData[k][7], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + i * 10, 10, 10);
+                        }
+                    }
+
+                    var a = toDownload.getImageData(toDownloadData[k][6], toDownloadData[k][3] + toDownloadData[k][7], (toDownloadData[k][1] + toDownloadData[k][3]) * 2, toDownloadData[k][2]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[(i * a.width + j) * 4]) + hex(a.data[(i * a.width + j) * 4 + 1]) + hex(a.data[(i * a.width + j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[(i * a.width + j) * 4 + 3] / 255;
+                            ctx.clearRect(0 + j * 10 + 350, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                            ctx.fillRect(0 + j * 10 + 350, toDownloadData[k][0] + toDownloadData[k][3] * 10 + i * 10, 10, 10);
+                        }
+                    }
+
+                    var a = toDownload.getImageData(toDownloadData[k][6] + toDownloadData[k][3] + toDownloadData[k][1], toDownloadData[k][7], toDownloadData[k][1], toDownloadData[k][3]);
+                    for (let i = 0; i < a.height; i++) {
+                        for (let j = 0; j < a.width; j++) {
+                            ctx.fillStyle = "#" + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 1]) + hex(a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 2]);
+                            ctx.globalAlpha = a.data[((a.height - 1 - i) * a.width + a.width - 1 - j) * 4 + 3] / 255;
+                            ctx.clearRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                            ctx.fillRect(toDownloadData[k][3] * 10 + j * 10 + 350, toDownloadData[k][0] + (toDownloadData[k][2] + toDownloadData[k][3]) * 10 + i * 10, 10, 10);
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+                uploaded = false;
+            }
+        }
+        if (window.confirm("っていうかデフォルトスキン用意する?")) {
+            let skinTimer = setTimeout(initSkin, 100);
+        }
+        timer = setInterval(tick, 100);
 //一つのcanvasでやった方がよくね？　　tableとgetBoundingClientRect()の使い方も覚えておこう!
 //いや、offsetX便利すぎ、
 //imagedata配列の%10==0の要素のみを抽出する。
 //r:front gray:left green:back white:right blue:top
 //cubeのtextureの向き合わねえからplaneにするかも
 //ローカルで呼ばれた画像を貼ったcanvasは汚染され、getImageDataなどが使えなくなる
-</script>
+    </script>
+
 </html>
