@@ -65,6 +65,7 @@
     <script src="TextureLoader.js"></script>
     <script src="CanvasTexture.js"></script>
     <script src="minecraftdata.js"></script>
+    <script src="data_structure.js"></script>
     <script>
         "use strict"
         let canvas = document.getElementById("canvas");
@@ -189,64 +190,33 @@
                             }
                             break;
                         case "penki":
-                            /*var originalColor=ctx.getImageData(Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10,1,1).data;
-                            var penkiData=[[[Math.floor(e.offsetX/10)*10,Math.floor(e.offsetY/10)*10]]];
-                            var count=0;
-                            console.log(penkiData[0].length);
-                            while(penkiData[0].length){
-                            penkiData[1]=[];
-                            console.log(penkiData);
-                            for(let i=0;i<penkiData[0].length;i++){
-                            ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1],10,10);
-                            if(ctx.getImageData(penkiData[0][i][0]-10,penkiData[0][i][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0]-10,penkiData[0][i][1])){
-                            penkiData[1].push([penkiData[0][i][0]-10,penkiData[0][i][1]]);
-                            ctx.fillRect(penkiData[0][i][0]-10,penkiData[0][i][1],10,10);
-                            }
-                            if(ctx.getImageData(penkiData[0][i][0]+10,penkiData[0][i][1],1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0]+10,penkiData[0][i][1])){
-                            penkiData[1].push([penkiData[0][i][0]+10,penkiData[0][i][1]]);
-                            ctx.fillRect(penkiData[0][i][0]+10,penkiData[0][i][1],10,10);
-                            }
-                            if(ctx.getImageData(penkiData[0][i][0],penkiData[0][i][1]-10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0],penkiData[0][i][1]-10)){
-                            penkiData[1].push([penkiData[0][i][0],penkiData[0][i][1]-10]);
-                            ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1]-10,10,10);
-                            }
-                            if(ctx.getImageData(penkiData[0][i][0],penkiData[0][i][1]+10,1,1).data.toString()==originalColor&&gridJudgement(penkiData[0][i][0],penkiData[0][i][1]+10)){
-                            penkiData[1].push([penkiData[0][i][0],penkiData[0][i][1]+10]);
-                            ctx.fillRect(penkiData[0][i][0],penkiData[0][i][1]+10,10,10);
-                            }
-                            
-                            
-                            }
-                            penkiData.shift();
-                            count++;
-                            if(count>10){
-                            break;
-                            }
-                            }*/
+                            //塗りつぶし処理中に新たに処理するのを禁じてる。
                             console.log(ImFree);
                             if (ImFree) {
                                 ImFree = false;
+                                //塗りつぶす色を取得
                                 var originalColor = ctx.getImageData(Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10, 1, 1).data.toString();
-                                var penkiData = [[Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10]];
-                                while (penkiData.length) {
-                                    if (ctx.getImageData(penkiData[0][0] - 10, penkiData[0][1], 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0] - 10, penkiData[0][1])) {
-                                        penkiData.push([penkiData[0][0] - 10, penkiData[0][1]]);
-                                        ctx.fillRect(penkiData[0][0] - 10, penkiData[0][1], 10, 10);
-                                    }
-                                    if (ctx.getImageData(penkiData[0][0] + 10, penkiData[0][1], 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0] + 10, penkiData[0][1])) {
-                                        penkiData.push([penkiData[0][0] + 10, penkiData[0][1]]);
-                                        ctx.fillRect(penkiData[0][0] + 10, penkiData[0][1], 10, 10);
-                                    }
-                                    if (ctx.getImageData(penkiData[0][0], penkiData[0][1] - 10, 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0], penkiData[0][1] - 10)) {
-                                        penkiData.push([penkiData[0][0], penkiData[0][1] - 10]);
-                                        ctx.fillRect(penkiData[0][0], penkiData[0][1] - 10, 10, 10);
-                                    }
-                                    if (ctx.getImageData(penkiData[0][0], penkiData[0][1] + 10, 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0][0], penkiData[0][1] + 10)) {
-                                        penkiData.push([penkiData[0][0], penkiData[0][1] + 10]);
-                                        ctx.fillRect(penkiData[0][0], penkiData[0][1] + 10, 10, 10);
-                                    }
-                                    penkiData.shift();
+                                var penkiQueue = new Queue();
+                                const flags={};
+                                
+                                penkiQueue.push([Math.floor(e.offsetX / 10) * 10, Math.floor(e.offsetY / 10) * 10]);
+                                while (penkiQueue.size) {
+                                    console.log(flags);
+                                    let penkiData = penkiQueue.pop();
+                                    if(flags.hasOwnProperty(penkiData[0])&&flags[penkiData[0]].hasOwnProperty(penkiData[1]))
+                                        continue;
                                     console.log(penkiData);
+                                    if(!flags.hasOwnProperty(penkiData[0]))
+                                        flags[penkiData[0]]={};
+                                    flags[penkiData[0]][penkiData[1]]=true;
+                                    ctx.fillRect(penkiData[0], penkiData[1], 10, 10);
+                                    for(const v of [[-10,0],[10,0],[0,10],[0,-10]]){
+                                        if (ctx.getImageData(penkiData[0] + v[0], penkiData[1] + v[1], 1, 1).data.toString() == originalColor && gridJudgement(penkiData[0] + v[0], penkiData[1] + v[1])) {
+                                            if(flags.hasOwnProperty(penkiData[0] + v[0])&&flags[penkiData[0] + v[0]].hasOwnProperty(penkiData[1] + v[1]))
+                                                continue;
+                                            penkiQueue.push([penkiData[0] + v[0], penkiData[1] + v[1]]);
+                                        }
+                                    }
                                 }
                                 ImFree = true;
                             }
@@ -348,7 +318,7 @@
             document.getElementById("img").width=150;
             document.getElementById("img").height=150;*/
             document.getElementById("download").href = skinData;
-            ThreeDData();
+            //ThreeDData();
             ifUploaded();
         }
         function hex(e) {
